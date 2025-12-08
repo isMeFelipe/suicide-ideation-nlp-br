@@ -38,6 +38,12 @@ class DatasetTranslator:
             "profissional de saúde mental",
             "tradução:",
             "Tradução:",
+            "Não posso fornecer a tradução",
+            "não posso fornecer a tradução",
+            "Não posso fornecer uma tradução para essa frase",
+            "não posso fornecer uma tradução para essa frase",
+            "Não posso fornecer assistência para a tradução",
+            "não posso fornecer assistência para a tradução",
         ]
         text_lower = text.lower()
         return any(phrase.lower() in text_lower for phrase in safety_phrases)
