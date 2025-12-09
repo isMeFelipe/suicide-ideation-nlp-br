@@ -9,7 +9,7 @@ import os
 sys.path.append(os.path.dirname(__file__))
 
 from src.preprocess import clean_text
-from src.config import MODEL_FILES
+from src.config import MODELS_DIR
 from src.xai import ModelExplainer
 
 st.set_page_config(
@@ -20,29 +20,77 @@ st.set_page_config(
 )
 
 @st.cache_resource
-def load_explainer():
+def load_explainer(dataset, language, model_type='logistic_regression'):
     try:
-        return ModelExplainer()
+        dataset_name = f"{dataset}_{language}"
+        model_path = MODELS_DIR / dataset_name / f"{model_type}.pkl"
+        vectorizer_path = MODELS_DIR / dataset_name / "vectorizer.pkl"
+        
+        if not model_path.exists():
+            raise FileNotFoundError(f"Modelo não encontrado: {model_path}")
+        if not vectorizer_path.exists():
+            raise FileNotFoundError(f"Vectorizer não encontrado: {vectorizer_path}")
+        
+        return ModelExplainer(
+            model_path=str(model_path),
+            vectorizer_path=str(vectorizer_path)
+        )
     except Exception as e:
         st.error(f"Erro ao carregar modelo: {e}")
-        st.stop()
-
-explainer = load_explainer()
+        return None
 
 st.title("Detecção de Ideação Suicida em Textos Curtos")
 st.markdown("### Sistema de Classificação com Explicabilidade (XAI)")
 
 with st.sidebar:
-    st.header("Configurações")
+    st.header("Configurações do Modelo")
+    
+    dataset = st.selectbox(
+        "Dataset",
+        options=['reddit', 'twitter', 'merged'],
+        index=0,
+        format_func=lambda x: x.capitalize(),
+        help="Selecione o dataset usado para treinar o modelo"
+    )
+    
+    language = st.selectbox(
+        "Idioma",
+        options=['en', 'pt'],
+        index=0,
+        format_func=lambda x: 'Inglês' if x == 'en' else 'Português',
+        help="Selecione o idioma do modelo"
+    )
+    
+    model_type = st.selectbox(
+        "Modelo",
+        options=['logistic_regression', 'svm', 'random_forest'],
+        index=0,
+        format_func=lambda x: {
+            'logistic_regression': 'Regressão Logística',
+            'svm': 'SVM (Support Vector Machine)',
+            'random_forest': 'Random Forest'
+        }[x],
+        help="Selecione o algoritmo de machine learning"
+    )
+    
+    st.markdown("---")
+    
+    explainer = load_explainer(dataset, language, model_type)
+    
+    if explainer is None:
+        st.error("Não foi possível carregar o modelo. Verifique se os arquivos existem.")
+        st.stop()
+    
+    st.markdown("### Sobre o Modelo")
+    st.info(f"**Dataset:** {dataset.capitalize()} ({'Inglês' if language == 'en' else 'Português'})")
+    st.info(f"**Modelo:** {model_type.replace('_', ' ').title()}")
+    st.info(f"**Features:** {len(explainer.feature_names)}")
+    
+    st.markdown("---")
     
     show_shap = st.checkbox("Mostrar Explicação SHAP", value=True)
     show_lime = st.checkbox("Mostrar Explicação LIME", value=True)
     num_features = st.slider("Número de features a exibir", 5, 30, 10)
-    
-    st.markdown("---")
-    st.markdown("### Sobre o Modelo")
-    st.info(f"**Modelo:** {explainer.model_name}")
-    st.info(f"**Features:** {len(explainer.feature_names)}")
     
     st.markdown("---")
     st.markdown("### Legenda")
@@ -88,7 +136,7 @@ if analyze_button:
                 st.markdown("### Classificação")
                 if result['prediction'] == 1:
                     st.error(f"**{result['prediction_label']}**")
-            else:
+                else:
                     st.success(f"**{result['prediction_label']}**")
                 
                 st.metric("Confiança", f"{result['probability']:.1%}")
@@ -222,7 +270,7 @@ if analyze_button:
                             fig = explainer.plot_comparison(user_input, max_features=min(num_features, 10))
                             st.pyplot(fig)
                             plt.close()
-        except Exception as e:
+                        except Exception as e:
                             st.warning(f"Não foi possível gerar gráfico de comparação: {e}")
                         
                         col_comp1, col_comp2 = st.columns(2)

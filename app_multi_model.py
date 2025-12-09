@@ -33,12 +33,23 @@ st.markdown("### Sistema Multi-Modelo com Explicabilidade (XAI)")
 with st.sidebar:
     st.header("Configurações")
     
-    dataset = st.selectbox(
+    dataset_base = st.selectbox(
         "Dataset",
-        options=['reddit_en', 'twitter_en', 'merged_en'],
+        options=['reddit', 'twitter', 'merged'],
         index=0,
+        format_func=lambda x: x.capitalize(),
         help="Selecione o dataset usado para treinar os modelos"
     )
+    
+    language = st.selectbox(
+        "Idioma",
+        options=['en', 'pt'],
+        index=0,
+        format_func=lambda x: 'Inglês' if x == 'en' else 'Português',
+        help="Selecione o idioma do modelo"
+    )
+    
+    dataset = f"{dataset_base}_{language}"
     
     st.markdown("---")
     
@@ -51,6 +62,8 @@ with st.sidebar:
         for model in available_models:
             st.success(f"{model.replace('_', ' ').title()}")
         
+        st.markdown("---")
+        st.info(f"**Dataset:** {dataset_base.capitalize()} ({'Inglês' if language == 'en' else 'Português'})")
         st.markdown("---")
         
         selected_model = st.selectbox(
